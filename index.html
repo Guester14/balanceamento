@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Balanço Químico (PWA)</title>
+
+
+<!-- Manifest -->
+<link rel="manifest" href="manifest.json" />
+
+
+<!-- Cor da barra do navegador no mobile -->
+<meta name="theme-color" content="#3498db" />
+
+
+<!-- Ícones -->
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+
+<script>
+// Registrar service worker
+if ("serviceWorker" in navigator) {
+window.addEventListener("load", () => {
+navigator.serviceWorker.register("sw.js");
+});
+}
+</script>
+</head>
+<body>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .screen {
+            width: 800px;
+            height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            max-width: 600px;
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-exit {
+            background-color: #e74c3c;
+        }
+
+        .btn-exit:hover {
+            background-color: #c0392b;
+        }
+
+        .equation-container {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            width: 100%;
+            border: 1px solid #e1e4e8;
+        }
+
+        .equation {
+            font-size: 28px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .coefficient {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            text-align: center;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            background-color: white;
+            color: #333;
+            margin: 0 8px;
+        }
+
+        .molecule {
+            display: flex;
+            align-items: center;
+            margin: 0 8px;
+        }
+
+        .element {
+            padding: 4px 8px;
+            margin: 0 2px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .subscript {
+            font-size: 0.8em;
+            vertical-align: sub;
+        }
+
+        .feedback {
+            font-size: 18px;
+            margin: 20px 0;
+            min-height: 30px;
+            font-weight: 500;
+        }
+
+        .correct {
+            color: #27ae60;
+        }
+
+        .incorrect {
+            color: #e74c3c;
+        }
+
+        .instructions {
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .instructions li {
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .periodic-colors .H { background-color: #FF9999; color: black; }
+        .periodic-colors .O { background-color: #FF6666; color: black; }
+        .periodic-colors .C { background-color: #888888; color: white; }
+        .periodic-colors .N { background-color: #3050F8; color: white; }
+        .periodic-colors .Cl { background-color: #1FF01F; color: black; }
+        .periodic-colors .Na { background-color: #AB5CF2; color: black; }
+    </style>
+</head>
+<body>
+    <!-- Tela 1: Tela Inicial -->
+    <div id="screen1" class="screen">
+        <h1>Balanço Químico</h1>
+        <p>Teste suas habilidades em balanceamento de equações químicas!</p>
+        <button id="playBtn" class="btn">Jogar</button>
+        <button id="howToPlayBtn" class="btn">Como Jogar</button>
+        <button id="exitBtn1" class="btn btn-exit">Sair</button>
+    </div>
+
+    <!-- Tela 2: Como Jogar -->
+    <div id="screen2" class="screen hidden">
+        <h2>Como Jogar</h2>
+        <div class="instructions">
+            <p>No jogo de Balanço Químico, seu objetivo é equilibrar equações químicas ajustando os coeficientes:</p>
+            <ul>
+                <li>Digite números nos campos de coeficiente para balancear a equação</li>
+                <li>Uma equação balanceada tem o mesmo número de átomos de cada elemento em ambos os lados</li>
+                <li>Clique em "Verificar" para ver se sua resposta está correta</li>
+                <li>Use "Próxima Equação" para avançar para um novo desafio</li>
+            </ul>
+            <p>Exemplo: Para balancear H₂ + O₂ → H₂O, você precisaria de 2H₂ + O₂ → 2H₂O</p>
+        </div>
+        <button id="backBtn" class="btn">Voltar</button>
+    </div>
+
+    <!-- Tela 3: Jogo -->
+    <div id="screen3" class="screen hidden">
+        <h2>Balanceie a Equação</h2>
+        <div class="equation-container">
+            <div id="equation" class="equation">
+                <!-- A equação será gerada dinamicamente pelo JavaScript -->
+            </div>
+        </div>
+        <div id="feedback" class="feedback"></div>
+        <div>
+            <button id="checkBtn" class="btn">Verificar</button>
+            <button id="nextBtn" class="btn">Próxima Equação</button>
+            <button id="exitBtn3" class="btn btn-exit">Sair</button>
+        </div>
+    </div>
+
+    <script>
+        // Elementos da interface
+        const screen1 = document.getElementById('screen1');
+        const screen2 = document.getElementById('screen2');
+        const screen3 = document.getElementById('screen3');
+        const playBtn = document.getElementById('playBtn');
+        const howToPlayBtn = document.getElementById('howToPlayBtn');
+        const backBtn = document.getElementById('backBtn');
+        const exitBtn1 = document.getElementById('exitBtn1');
+        const exitBtn3 = document.getElementById('exitBtn3');
+        const checkBtn = document.getElementById('checkBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const equationDiv = document.getElementById('equation');
+        const feedbackDiv = document.getElementById('feedback');
+
+        // Navegação entre telas
+        playBtn.addEventListener('click', () => {
+            screen1.classList.add('hidden');
+            screen3.classList.remove('hidden');
+            startNewGame();
+        });
+
+        howToPlayBtn.addEventListener('click', () => {
+            screen1.classList.add('hidden');
+            screen2.classList.remove('hidden');
+        });
+
+        backBtn.addEventListener('click', () => {
+            screen2.classList.add('hidden');
+            screen1.classList.remove('hidden');
+        });
+
+        exitBtn1.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja sair do jogo?')) {
+                window.close();
+            }
+        });
+
+        exitBtn3.addEventListener('click', () => {
+            screen3.classList.add('hidden');
+            screen1.classList.remove('hidden');
+        });
+
+        // Lógica do jogo
+        let currentEquation;
+        let coefficientInputs = [];
+
+        // Equações químicas pré-definidas
+        const equations = [
+            {
+                reactants: [{ formula: 'H2', count: 1 }, { formula: 'O2', count: 1 }],
+                products: [{ formula: 'H2O', count: 1 }],
+                balanced: [{ coefficient: 2 }, { coefficient: 1 }, { coefficient: 2 }]
+            },
+            {
+                reactants: [{ formula: 'CH4', count: 1 }, { formula: 'O2', count: 1 }],
+                products: [{ formula: 'CO2', count: 1 }, { formula: 'H2O', count: 1 }],
+                balanced: [{ coefficient: 1 }, { coefficient: 2 }, { coefficient: 1 }, { coefficient: 2 }]
+            },
+            {
+                reactants: [{ formula: 'N2', count: 1 }, { formula: 'H2', count: 1 }],
+                products: [{ formula: 'NH3', count: 1 }],
+                balanced: [{ coefficient: 1 }, { coefficient: 3 }, { coefficient: 2 }]
+            },
+            {
+                reactants: [{ formula: 'Na', count: 1 }, { formula: 'Cl2', count: 1 }],
+                products: [{ formula: 'NaCl', count: 1 }],
+                balanced: [{ coefficient: 2 }, { coefficient: 1 }, { coefficient: 2 }]
+            },
+            {
+                reactants: [{ formula: 'CO', count: 1 }, { formula: 'O2', count: 1 }],
+                products: [{ formula: 'CO2', count: 1 }],
+                balanced: [{ coefficient: 2 }, { coefficient: 1 }, { coefficient: 2 }]
+            }
+        ];
+
+        // Iniciar um novo jogo
+        function startNewGame() {
+            // Selecionar uma equação aleatória
+            currentEquation = equations[Math.floor(Math.random() * equations.length)];
+            renderEquation();
+            feedbackDiv.textContent = '';
+            feedbackDiv.className = 'feedback';
+        }
+
+        // Renderizar a equação na tela
+        function renderEquation() {
+            equationDiv.innerHTML = '';
+            coefficientInputs = [];
+
+            // Renderizar reagentes
+            currentEquation.reactants.forEach((reactant, index) => {
+                const coefficientInput = document.createElement('input');
+                coefficientInput.type = 'number';
+                coefficientInput.min = '1';
+                coefficientInput.value = '1';
+                coefficientInput.className = 'coefficient';
+                coefficientInputs.push(coefficientInput);
+                equationDiv.appendChild(coefficientInput);
+
+                const moleculeDiv = document.createElement('div');
+                moleculeDiv.className = 'molecule';
+                moleculeDiv.innerHTML = parseMolecule(reactant.formula);
+                equationDiv.appendChild(moleculeDiv);
+
+                // Adicionar sinal de "+" se não for o último reagente
+                if (index < currentEquation.reactants.length - 1) {
+                    const plusSign = document.createElement('span');
+                    plusSign.textContent = ' + ';
+                    plusSign.style.margin = '0 10px';
+                    equationDiv.appendChild(plusSign);
+                }
+            });
+
+            // Adicionar seta
+            const arrow = document.createElement('span');
+            arrow.textContent = ' → ';
+            arrow.style.margin = '0 20px';
+            equationDiv.appendChild(arrow);
+
+            // Renderizar produtos
+            currentEquation.products.forEach((product, index) => {
+                const coefficientInput = document.createElement('input');
+                coefficientInput.type = 'number';
+                coefficientInput.min = '1';
+                coefficientInput.value = '1';
+                coefficientInput.className = 'coefficient';
+                coefficientInputs.push(coefficientInput);
+                equationDiv.appendChild(coefficientInput);
+
+                const moleculeDiv = document.createElement('div');
+                moleculeDiv.className = 'molecule';
+                moleculeDiv.innerHTML = parseMolecule(product.formula);
+                equationDiv.appendChild(moleculeDiv);
+
+                // Adicionar sinal de "+" se não for o último produto
+                if (index < currentEquation.products.length - 1) {
+                    const plusSign = document.createElement('span');
+                    plusSign.textContent = ' + ';
+                    plusSign.style.margin = '0 10px';
+                    equationDiv.appendChild(plusSign);
+                }
+            });
+        }
+
+        // Parse da fórmula química para HTML com cores
+        function parseMolecule(formula) {
+            let html = '';
+            let currentElement = '';
+            
+            for (let i = 0; i < formula.length; i++) {
+                const char = formula[i];
+                
+                // Se é uma letra maiúscula, começamos um novo elemento
+                if (char === char.toUpperCase() && char >= 'A' && char <= 'Z') {
+                    // Se já temos um elemento, adicionamos ele ao HTML
+                    if (currentElement) {
+                        html += `<span class="element ${currentElement}">${currentElement}</span>`;
+                    }
+                    
+                    currentElement = char;
+                    
+                    // Verificar se o próximo caractere é uma letra minúscula (elementos com duas letras)
+                    if (i + 1 < formula.length && formula[i + 1] === formula[i + 1].toLowerCase() && formula[i + 1] >= 'a' && formula[i + 1] <= 'z') {
+                        currentElement += formula[i + 1];
+                        i++; // Pular o próximo caractere
+                    }
+                } 
+                // Se é um número (subscript)
+                else if (char >= '0' && char <= '9') {
+                    let subscript = char;
+                    
+                    // Verificar se há mais números (para subscritos com mais de um dígito)
+                    while (i + 1 < formula.length && formula[i + 1] >= '0' && formula[i + 1] <= '9') {
+                        subscript += formula[i + 1];
+                        i++;
+                    }
+                    
+                    // Adicionar o elemento atual e o subscrito
+                    html += `<span class="element ${currentElement}">${currentElement}<sub class="subscript">${subscript}</sub></span>`;
+                    currentElement = '';
+                }
+            }
+            
+            // Adicionar o último elemento se houver
+            if (currentElement) {
+                html += `<span class="element ${currentElement}">${currentElement}</span>`;
+            }
+            
+            return html;
+        }
+
+        // Verificar se a equação está balanceada
+        checkBtn.addEventListener('click', () => {
+            const isCorrect = checkBalance();
+            
+            if (isCorrect) {
+                feedbackDiv.textContent = 'Parabéns! A equação está balanceada corretamente!';
+                feedbackDiv.className = 'feedback correct';
+            } else {
+                feedbackDiv.textContent = 'A equação não está balanceada. Tente novamente!';
+                feedbackDiv.className = 'feedback incorrect';
+            }
+        });
+
+        // Função para verificar o balanceamento
+        function checkBalance() {
+            // Contar átomos nos reagentes
+            const reactantAtoms = {};
+            
+            currentEquation.reactants.forEach((reactant, index) => {
+                const coefficient = parseInt(coefficientInputs[index].value) || 1;
+                const atoms = parseAtoms(reactant.formula);
+                
+                for (const element in atoms) {
+                    reactantAtoms[element] = (reactantAtoms[element] || 0) + atoms[element] * coefficient;
+                }
+            });
+            
+            // Contar átomos nos produtos
+            const productAtoms = {};
+            
+            currentEquation.products.forEach((product, index) => {
+                const coefficient = parseInt(coefficientInputs[currentEquation.reactants.length + index].value) || 1;
+                const atoms = parseAtoms(product.formula);
+                
+                for (const element in atoms) {
+                    productAtoms[element] = (productAtoms[element] || 0) + atoms[element] * coefficient;
+                }
+            });
+            
+            // Comparar contagens
+            for (const element in reactantAtoms) {
+                if (reactantAtoms[element] !== productAtoms[element]) {
+                    return false;
+                }
+            }
+            
+            for (const element in productAtoms) {
+                if (reactantAtoms[element] !== productAtoms[element]) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // Parse da fórmula para contar átomos
+        function parseAtoms(formula) {
+            const atoms = {};
+            let currentElement = '';
+            let currentCount = '';
+            
+            for (let i = 0; i < formula.length; i++) {
+                const char = formula[i];
+                
+                // Se é uma letra maiúscula, começamos um novo elemento
+                if (char === char.toUpperCase() && char >= 'A' && char <= 'Z') {
+                    // Se já temos um elemento, adicionamos ele ao contador
+                    if (currentElement) {
+                        const count = currentCount ? parseInt(currentCount) : 1;
+                        atoms[currentElement] = (atoms[currentElement] || 0) + count;
+                        currentCount = '';
+                    }
+                    
+                    currentElement = char;
+                    
+                    // Verificar se o próximo caractere é uma letra minúscula (elementos com duas letras)
+                    if (i + 1 < formula.length && formula[i + 1] === formula[i + 1].toLowerCase() && formula[i + 1] >= 'a' && formula[i + 1] <= 'z') {
+                        currentElement += formula[i + 1];
+                        i++; // Pular o próximo caractere
+                    }
+                } 
+                // Se é um número
+                else if (char >= '0' && char <= '9') {
+                    currentCount += char;
+                }
+            }
+            
+            // Adicionar o último elemento
+            if (currentElement) {
+                const count = currentCount ? parseInt(currentCount) : 1;
+                atoms[currentElement] = (atoms[currentElement] || 0) + count;
+            }
+            
+            return atoms;
+        }
+
+        // Próxima equação
+        nextBtn.addEventListener('click', startNewGame);
+
+        // Inicializar o jogo
+        startNewGame();
+    </script>
+</body>
+</html>
